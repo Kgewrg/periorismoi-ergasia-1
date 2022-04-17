@@ -9,8 +9,8 @@ def initArrays(sudoku, domains):
     count = 0
     for line in lines:
         sudoku[count] = line.split(" ")  # Διαβάζει γραμμη γραμμη το αρχείο, την σπαει στα κενα, και αγνωεί τα \n
-        sudoku[count][-1] = sudoku[count][-1].replace('\n',
-                                                      '')  # Κάτι γινόταν και χρείαστηκε να προσθέσω αυτήν την γραμμή
+        sudoku[count][-1] = sudoku[count][-1].replace('\n', '')
+        # Κάτι γινόταν και χρείαστηκε να προσθέσω αυτήν την γραμμή
         sudoku[count] = [int(x) for x in sudoku[count]]  # Μετατρέπει ολα τα στοιχεία της γραμμης σε int
         # print(sudoku[count])
         count += 1
@@ -28,9 +28,8 @@ def initArrays(sudoku, domains):
 
 def NC(sudoku, domains):
     """
-    Αφαιρεί όλες τι τιμες απο το Domain καποιο κελιου που δεν είναι συμβατές με οποιοδηποτε κελι.
+        Αφαιρεί όλες τι τιμες απο το Domain καποιο κελιου που δεν είναι συμβατές με οποιοδηποτε κελι.
     """
-
     for row in range(9):
         for col in range(9):
             if sudoku[row][col] == 0:
@@ -66,6 +65,10 @@ def NC(sudoku, domains):
 
 
 def CHECK(xi, a, xj, b):
+    print("xi", xi)
+    print("a", a)
+    print("xj", xj)
+    print("b", b)
     if C[xi][xj] == 1:
         if a != b:
             return True
@@ -81,20 +84,24 @@ def CHECK(xi, a, xj, b):
 
 def SUPPORTED(xi, a, xj, domains):
     support = False
-    for i in domains[xj]:
-        if CHECK(xi, a, xj, i) == True:
-            support = True
-            return support
+    for i in range(9):
+        if domains[xi][i] == -1:
+            print("supported")
+            if CHECK(xi, a, xj, i) == True:
+                support = True
+                return support
     return support
 
 
 def REVISE(xi, xj, domains):
     revised = False
-    for i in domains[xi]:
-        found = SUPPORTED(xi, i, xj, domains)
-        if found == False:
-            revised = True
-            domains[xi][i] = -2
+    for i in range(9):
+        print(i)
+        if domains[xi][i] == -1:
+            found = SUPPORTED(xi, i, xj, domains)
+            if found == False:
+                revised = True
+                domains[xi][i] = -2
     return revised
 
 
@@ -140,8 +147,10 @@ def CONSTRAIN(C):
         column = column + 1
 
 
-def AC3NEW(C, domain):
+def AC3NEW(C, domains):
+    # Q=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]
     Q = [i for i in range(81)]
+    print("Q is ")
     # for count in range(81):
     #   for i in range(9):
     #      if domain[count][i]==-1:
@@ -163,20 +172,37 @@ def AC3NEW(C, domain):
     # Q.appened(i+1)
     k = 0
     while len(Q) != 0:
+        # print(len(Q))
         for i in range(81):
             for j in range(81):
                 if C[i][j] != 0:
+                    # print(len(Q))
                     updated = REVISE(i, j, domains)
                     for ch in range(9):
-                        if domain[k][ch] == -2:
+                        valueCounter = 9
+                        if domains[k][ch] == -1:
+                            print("domainsss", domains[k][ch])
+                            valueCounter -= 1
+                        if valueCounter == 0:
                             return False
-                if updated == True:
-                    Q.append((9 * i) + j)
+                if updated == True:  # True οταν έχει γίνει αφαίρεση
+                    print("befpreeee", len(Q))
+                    Q.append(1)
+                    print("afterrrrr", len(Q))
                 else:
-                    Q.remove((9 * i) + j)
-        for m in Q:
-            print(m)
-        k = k + 1
+                    if len(Q) != 0:
+                        Q.pop(0)
+                        print("pop", len(Q))
+                    else:
+                        break
+            k = k + 1
+            print("k", k)
+
+    print("domains array")
+    for i in range(len(domains)):
+        print(i, domains[i])
+
+    # Προσπαθει να αφαιρέσει μη συμβατες τιμες
 
 
 def AC3(sudoku, domains):
@@ -190,7 +216,7 @@ def AC3(sudoku, domains):
 if (__name__ == "__main__"):
 
     # Δημηουργία πίνακα εισοδου
-    sudoku = [[-1 for i in range(9)] for i in range(9)]
+    sudoku = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(9)]
     # έχει την μορφη:
     # (1) [-1, -1, -1, -1, -1, -1, -1, -1, -1]
     # (2) [-1, -1, -1, -1, -1, -1, -1, -1, -1]
@@ -203,7 +229,6 @@ if (__name__ == "__main__"):
 
     # AC3(sudoku, domains)
     # printBox(sudoku)
-    NC(sudoku, domains)
 
     # prints Sudoku
     print("sudoku array")
@@ -215,13 +240,9 @@ if (__name__ == "__main__"):
     for i in range(len(domains)):
         print(i, domains[i])
 
-    # print("constrain")
-    # CONSTRAIN(C)
-    # for i in range(81):
-    #     print(i, C[i])
-    #
-    # AC3NEW(C, domains)
-    #
-    # print("domains array")
-    # for i in range(len(domains)):
-    #     print(i, domains[i])
+    print("constrain")
+    CONSTRAIN(C)
+    for i in range(81):
+        print(i, C[i])
+
+    AC3NEW(C, domains)
