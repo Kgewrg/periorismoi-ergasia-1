@@ -22,7 +22,7 @@ class node():
 def initArrays():
     global occupiedArray, sudoku, domains, removedCounter
     lines = []
-    with open('sudoku1.txt') as f:
+    with open('sudoku2.txt') as f:
         lines = f.readlines()
 
     count = 0
@@ -243,3 +243,9 @@ if (__name__ == "__main__"):
             if (j == -1):
                 available += 1
         print("available for variable", i, ":", available)
+
+        # TODO:
+        #   1. Να γίνει χρονομέτρηση,
+        #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
+        #   3. Να μπεί print για το αν κάποια μεταβλητή έχει μονο μία τιμή
+
