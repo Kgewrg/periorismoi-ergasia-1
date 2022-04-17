@@ -127,6 +127,9 @@ def SUPPORTED(xi,a,xj,domains):
 
 def REVISE(xi,xj,domains):
     revised=False
+    for i in domains[xi]:
+        if i>0:
+            return revised
     for i in range(len(domains[xi])):
         if domains[xi][i]!=-2:
             found=SUPPORTED(xi,i,xj,domains)
