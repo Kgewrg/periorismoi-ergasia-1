@@ -22,7 +22,7 @@ class node():
 def initArrays():
     global occupiedArray, sudoku, domains, removedCounter
     lines = []
-    with open('sudoku2.txt') as f:
+    with open('sudoku1.txt') as f:
         lines = f.readlines()
 
     count = 0
@@ -195,6 +195,111 @@ def AC3():
 
     # print("breaking, len(Q):", len(Q), "i =", i)
 
+def RPC1():
+    global sudoku, domains, C
+    # Φτίαχνουμε μια ουρά μέ ολα τα κελιά του Sudoku
+    Q = []
+    for row in range(9):
+        for col in range(9):
+            Q.append(node((row, col)))
+
+    while (len(Q) > 0):
+        # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
+        tmpNode_i = Q.pop(0)
+        i = tmpNode_i.domainsRow  # μας νοιάζει η "θέση" της στην domains
+        neighbours = neigh(i)  # εξετάζουμε τους γείτωνες του i
+        for j in neighbours:
+            # print("i=", i, "j=", j)
+            if i == j:  # για να μην εξετάσουμε τον εαυτό του
+                continue
+
+            updated = REVISE_RPC(i, j)  # αν έχει κάνει αλλαγή επιστρέφει true
+            count = 9
+            for ch in range(9):  # Ελέγχουμε αν κάτι μείνει κενό
+                if domains[i][ch] == -2:
+                    count = count - 1
+                    # print("domainsss", domains[k])
+                    if count == 0:
+                        print("Found empty domain", i, domains[i])
+                        return False
+            if updated:
+                Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
+                # το ξαναβάζουμε στην ουρά
+
+def REVISE_RPC(xi, xj):
+    """
+    Ελέγχει για τις τιμές του xi, αν υπάρχουν συνεπής στην xj
+    :param xi: γραμμη του domains για την μεταβλητή 1
+    :param xj: γραμμη του domains για την μεταβλητή 2
+    :return: False αν δεν γίνει κάποια αλλαγή
+    """
+    global domains, removedCounter
+    print("checking: xi=", xi, ",xj=", xj)
+    revised = False
+    for i in domains[xi]:
+        if i > 0:
+            return revised
+    for i in range(len(domains[xi])):
+        if domains[xi][i] != -2:
+            found = SUPPORT_RPC(xi, i, xj)
+            print("found....", found)
+            if not found:
+                # print("false..")
+                revised = True
+                domains[xi][i] = -2
+                removedCounter += 1
+                print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
+    return revised
+
+def SUPPORT_RPC(xi, a, xj):
+    """
+    Ελέγχει αν για την τιμή a της xi υπάρχουν συνεπής στην xj
+    :param xi: Μεταβλητή 1 (1-81)
+    :param a: τιμή της μεταβλητής 1
+    :param xj: Μεταβλητή 2
+    :return: True αν υπάρχει κάποια διαφορετική τιμή
+    """
+    global domains
+    for j in range(len(domains[xj])):
+        if domains[xj][j] != -2:
+            if CHECK(xi, a, xj, j):
+                for m in range(len(domains[xj])):
+                    if m>j:
+                        if domains[xj][m] != -2:
+                            if CHECK(xi, a, xj, m):
+                                print("heloooooooooooooooooooo")
+                                return True
+                if PC(xi,a,xj,j):
+                    return True    #ειναι TRUE και RPC1
+                else:
+                    return False    #Δεν είναι RPC1
+    return False
+
+def PC(xi,a,xj,b):
+    Q = []
+    for row in range(9):
+        for col in range(9):
+            Q.append(node((row, col)))
+    tmpNode_i = Q.pop(0)
+    i = tmpNode_i.domainsRow
+    tmpNode_j = Q.pop(0)
+    j = tmpNode_j.domainsRow
+    neighbours1 = neigh(i)  # εξετάζουμε τους γείτωνες του i
+    neighbours2 = neigh(j)
+    for xki in neighbours1:
+        for xkj in neighbours2:
+            if xki==xkj:
+                pc_support=False
+                for c in range(len(domains[xki])):
+                    if CHECK(xi,a,xki,c):
+                        if CHECK(xj,b,xki,c):
+                            pc_support=True
+                            break
+                if pc_support==False:
+                    return False
+    return True
+
+
 
 if (__name__ == "__main__"):
 
@@ -229,23 +334,24 @@ if (__name__ == "__main__"):
     # for i in range(81):
     #     print(i, C[i])
 
-    AC3()
-    print("ac3 removed:", removedCounter)
-    print("domains array")
-    for i in range(len(domains)):
-        print(i, domains[i])
+    #AC3()
+    #print("ac3 removed:", removedCounter)
+    #print("domains array")
+    #for i in range(len(domains)):
+    #    print(i, domains[i])
 
-    for i in range(len(domains)):
-        if (i in occupiedArray):
-            continue
-        available = 0
-        for j in domains[i]:
-            if (j == -1):
-                available += 1
-        print("available for variable", i, ":", available)
+    #for i in range(len(domains)):
+    #    if (i in occupiedArray):
+    #        continue
+    #    available = 0
+    #    for j in domains[i]:
+    #       if (j == -1):
+    #           available += 1
+    #   print("available for variable", i, ":", available)
 
-        # TODO:
-        #   1. Να γίνει χρονομέτρηση,
-        #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
-        #   3. Να μπεί print για το αν κάποια μεταβλητή έχει μονο μία τιμή
+    RPC1()
+    # TODO:
+    #   1. Να γίνει χρονομέτρηση,
+    #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
+    #   3. Να μπεί print για το αν κάποια μεταβλητή έχει μονο μία τιμή
 
