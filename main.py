@@ -22,7 +22,7 @@ class node():
 def initArrays():
     global occupiedArray, sudoku, domains, removedCounter
     lines = []
-    with open('sudoku1.txt') as f:
+    with open('sudoku2.txt') as f:
         lines = f.readlines()
 
     count = 0
@@ -95,7 +95,7 @@ def REVISE(xi, xj):
     :return: False αν δεν γίνει κάποια αλλαγή
     """
     global domains, removedCounter
-    print("checking: xi=", xi, ",xj=", xj)
+    # print("checking: xi=", xi, ",xj=", xj)
     revised = False
     for i in domains[xi]:
         if i > 0:
@@ -194,6 +194,36 @@ def AC3():
                 # το ξαναβάζουμε στην ουρά
 
     # print("breaking, len(Q):", len(Q), "i =", i)
+def AC3_singleton(Q=[]):
+    """
+    Υλοποιήση του αλγορίθμου AC3
+    :return: False, αν κάποιο domain μήνει άδειο
+    """
+    global sudoku, domains, C
+    # Φτίαχνουμε μια ουρά μέ ολα τα κελιά του Sudoku
+
+    while (len(Q) > 0):
+        # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
+        tmpNode_i = Q.pop(0)
+        # i = tmpNode_i.domainsRow  # μας νοιάζει η "θέση" της στην domains
+        neighbours = neigh(i)  # εξετάζουμε τους γείτωνες του i
+        for j in neighbours:
+            # print("i=", i, "j=", j)
+            if i == j:  # για να μην εξετάσουμε τον εαυτό του
+                continue
+
+            updated = REVISE(i, j)  # αν έχει κάνει αλλαγή επιστρέφει true
+            count = 9
+            for ch in range(9):  # Ελέγχουμε αν κάτι μείνει κενό
+                if domains[i][ch] == -2:
+                    count = count - 1
+                    # print("domainsss", domains[k])
+                    if count == 0:
+                        print("Found empty domain", i, domains[i])
+                        return False
+            if updated:
+                Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
+                # το ξαναβάζουμε στην ουρά
 
 
 def RPC1():
@@ -241,10 +271,11 @@ def REVISE_RPC(xi, xj):
     for i in domains[xi]:
         if i > 0:
             return revised
+
     for i in range(len(domains[xi])):
         if domains[xi][i] != -2:
             found = SUPPORT_RPC(xi, i, xj)
-            print("found....", found)
+            # print("found....", found)
             if not found:
                 # print("false..")
                 revised = True
@@ -264,44 +295,91 @@ def SUPPORT_RPC(xi, a, xj):
     """
     global domains
     for j in range(len(domains[xj])):
-        if domains[xj][j] != -2:
-            if CHECK(xi, a, xj, j):
-                for m in range(len(domains[xj])):
-                    if m > j:
-                        if domains[xj][m] != -2:
-                            if CHECK(xi, a, xj, m):
-                                print("heloooooooooooooooooooo")
-                                return True
-                if PC(xi, a, xj, j):
-                    return True  # ειναι TRUE και RPC1
-                else:
-                    return False  # Δεν είναι RPC1
+        if domains[xj][j] == -2:
+            continue
+
+        if CHECK(xi, a, xj, j):
+            for m in range(len(domains[xj])):
+                if m > j:
+                    if domains[xj][m] == -2:
+                        continue
+                    # print("callin check(", xi, a, xj, m, ")")
+                    if CHECK(xi, a, xj, m):
+                        # print("heloooooooooooooooooooo")
+                        return True
+            # print("calling PC(", xi, a, xj, j, ")")
+            if PC(xi, a, xj, j):
+                return True  # ειναι TRUE και RPC1
+            else:
+                return False  # Δεν είναι RPC1
     return False
 
 
 def PC(xi, a, xj, b):
+    # περνω τους γείτωνες του xi κ xj
+    neighbours_xi = neigh(xi)  # γειτωνες του xi
+    neighbours_xj = neigh(xj)  # γειτωνες του xj
+    sameNeighbours = set(neighbours_xi) & set(neighbours_xj)  # κοινη γείτωνες
+
+    for xk in sameNeighbours:
+        pc_support = False
+        for c in range(len(domains[xk])):
+            if CHECK(xi, a, xk, c) and CHECK(xj, b, xk, c):
+                pc_support = True
+                break
+        if not pc_support:
+            return False
+    return True
+
+
+def NSACQ():
+    global removedCounter
+    AC3()
+    for row in domains:                                 # na ginei sinartisi
+        if (all(elem == -2 for elem in row)):
+            print("Found empty domain, domain wipeout")
+            return False
+
     Q = []
     for row in range(9):
         for col in range(9):
             Q.append(node((row, col)))
-    tmpNode_i = Q.pop(0)
-    i = tmpNode_i.domainsRow
-    tmpNode_j = Q.pop(0)
-    j = tmpNode_j.domainsRow
-    neighbours1 = neigh(i)  # εξετάζουμε τους γείτωνες του i
-    neighbours2 = neigh(j)
-    for xki in neighbours1:
-        for xkj in neighbours2:
-            if xki == xkj:
-                pc_support = False
-                for c in range(len(domains[xki])):
-                    if CHECK(xi, a, xki, c):
-                        if CHECK(xj, b, xki, c):
-                            pc_support = True
-                            break
-                if not pc_support:
-                    return False
-    return True
+
+    while (len(Q) > 0):
+        tmpNode_i = Q.pop(0)
+        if tmpNode_i.value != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
+            continue
+        xi = tmpNode_i.domainsRow  # μας νοιάζει η "θέση" της στην domains
+        changed = False
+        for a in range(len(domains[xi])):  # Λουπα που διατρέχει για όλες τις τιμές του xi
+            if domains[xi][a] == -2:  # Επίσης αγνωούμε τις τιμές της μεταβλητής οι οποίες έχουν βγει
+                continue
+            # επιλέγουμε μια τιμή και βγάζουμε τις υπόλοιπες απο το domain της μεταβλητής xi
+            tmpDomains = domains[xi].copy()  # για να επαναφέρουμε το domain αργότερα
+            domains[xi] = [-2 for x in domains[xi]]
+            domains[xi][a] = -1
+            ac3_Q = neigh(xi)  # φτιάχνουμε μια ουρά με τους γείτωνες του xi
+            print("Running ac3 for", xi, "'s neigbours:", ac3_Q)
+            AC3_singleton(ac3_Q.copy())  # τρεχουμε ac3 μονο για τους γείτωνες του xi
+
+            # ελέγχουμε αν ο AC3 άδιασε καποιο domain απο εκείνους τους γείτωνες
+            for row in domains:
+                if (all(elem == -2 for elem in row)):
+                    print("Found empty domain, domain wipeout")
+                    changed = True
+                    tmpDomains[a] = -2
+                    removedCounter += 1
+                    # meta tin epilogi kai afairesi twn ypoloipwn
+
+            domains[xi] = tmpDomains  # επαναφέρουμε το domain
+
+        # ελέγχουμε για αν άδειασε καποιο domain    (...γιατι και εδω ? )
+        for row in domains:  # na ginei sinartisi
+            if (all(elem == -2 for elem in row)):
+                print("Found empty domain, domain wipeout")
+                return False
+        if changed:  # άμα έγινε καποιο wipeout σε καποια μεταβλητή προσθέτουμε τους γείτωνες του xi για ελεγχο πάλι
+            Q.extend(ac3_Q)
 
 
 if (__name__ == "__main__"):
@@ -338,21 +416,34 @@ if (__name__ == "__main__"):
     #     print(i, C[i])
 
     # AC3()
+    # # print("domains array")
+    # # for i in range(len(domains)):
+    # #    print(i, domains[i])
+    #
+    # for i in range(len(domains)):
+    #     if (i in occupiedArray):
+    #         continue
+    #     available = 0
+    #     for j in domains[i]:
+    #         if (j == -1):
+    #             available += 1
+    #     print("available for variable", i, ":", available, "domain: ", domains[i])
     # print("ac3 removed:", removedCounter)
+
+
+    # RPC1()
     # print("domains array")
     # for i in range(len(domains)):
-    #    print(i, domains[i])
+    #     print(i, domains[i])
+    # print("removed:", removedCounter)
 
-    # for i in range(len(domains)):
-    #    if (i in occupiedArray):
-    #        continue
-    #    available = 0
-    #    for j in domains[i]:
-    #       if (j == -1):
-    #           available += 1
-    #   print("available for variable", i, ":", available)
+    NSACQ()
+    print("domains array")
+    for i in range(len(domains)):
+        print(i, domains[i])
+    print("removed:", removedCounter)
 
-    RPC1()
+
     # TODO:
     #   1. Να γίνει χρονομέτρηση,
     #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
