@@ -195,6 +195,7 @@ def AC3():
 
     # print("breaking, len(Q):", len(Q), "i =", i)
 
+
 def RPC1():
     global sudoku, domains, C
     # Φτίαχνουμε μια ουρά μέ ολα τα κελιά του Sudoku
@@ -226,6 +227,7 @@ def RPC1():
                 Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
                 # το ξαναβάζουμε στην ουρά
 
+
 def REVISE_RPC(xi, xj):
     """
     Ελέγχει για τις τιμές του xi, αν υπάρχουν συνεπής στην xj
@@ -251,6 +253,7 @@ def REVISE_RPC(xi, xj):
                 print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
     return revised
 
+
 def SUPPORT_RPC(xi, a, xj):
     """
     Ελέγχει αν για την τιμή a της xi υπάρχουν συνεπής στην xj
@@ -264,18 +267,19 @@ def SUPPORT_RPC(xi, a, xj):
         if domains[xj][j] != -2:
             if CHECK(xi, a, xj, j):
                 for m in range(len(domains[xj])):
-                    if m>j:
+                    if m > j:
                         if domains[xj][m] != -2:
                             if CHECK(xi, a, xj, m):
                                 print("heloooooooooooooooooooo")
                                 return True
-                if PC(xi,a,xj,j):
-                    return True    #ειναι TRUE και RPC1
+                if PC(xi, a, xj, j):
+                    return True  # ειναι TRUE και RPC1
                 else:
-                    return False    #Δεν είναι RPC1
+                    return False  # Δεν είναι RPC1
     return False
 
-def PC(xi,a,xj,b):
+
+def PC(xi, a, xj, b):
     Q = []
     for row in range(9):
         for col in range(9):
@@ -288,17 +292,16 @@ def PC(xi,a,xj,b):
     neighbours2 = neigh(j)
     for xki in neighbours1:
         for xkj in neighbours2:
-            if xki==xkj:
-                pc_support=False
+            if xki == xkj:
+                pc_support = False
                 for c in range(len(domains[xki])):
-                    if CHECK(xi,a,xki,c):
-                        if CHECK(xj,b,xki,c):
-                            pc_support=True
+                    if CHECK(xi, a, xki, c):
+                        if CHECK(xj, b, xki, c):
+                            pc_support = True
                             break
-                if pc_support==False:
+                if not pc_support:
                     return False
     return True
-
 
 
 if (__name__ == "__main__"):
@@ -334,13 +337,13 @@ if (__name__ == "__main__"):
     # for i in range(81):
     #     print(i, C[i])
 
-    #AC3()
-    #print("ac3 removed:", removedCounter)
-    #print("domains array")
-    #for i in range(len(domains)):
+    # AC3()
+    # print("ac3 removed:", removedCounter)
+    # print("domains array")
+    # for i in range(len(domains)):
     #    print(i, domains[i])
 
-    #for i in range(len(domains)):
+    # for i in range(len(domains)):
     #    if (i in occupiedArray):
     #        continue
     #    available = 0
@@ -354,4 +357,3 @@ if (__name__ == "__main__"):
     #   1. Να γίνει χρονομέτρηση,
     #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
     #   3. Να μπεί print για το αν κάποια μεταβλητή έχει μονο μία τιμή
-
