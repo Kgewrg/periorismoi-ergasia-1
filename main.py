@@ -1,6 +1,8 @@
 import time
 import copy
 
+import supplementary
+
 class node():
     def __init__(self, sudokuCordinate=(-1, -1), sudoku=[]):
         self.sudokuCordinate = sudokuCordinate
@@ -18,17 +20,35 @@ def initArrays(sudoku=[], domains=[], filename=""):
     :param filename: string, όνομα του αρχείου απο το οποίο θα διαβάσει
     :return:
     """
-    with open(filename) as f:
+    with open(filename, "r") as f:
         lines = f.readlines()
 
     count = 0
     for line in lines:
-        sudoku[count] = line.split(" ")  # Διαβάζει γραμμη γραμμη το αρχείο, την σπαει στα κενα, και αγνωεί τα \n
-        sudoku[count][-1] = sudoku[count][-1].replace('\n', '')
-        # Κάτι γινόταν και χρείαστηκε να προσθέσω αυτήν την γραμμή
-        sudoku[count] = [int(x) for x in sudoku[count]]  # Μετατρέπει ολα τα στοιχεία της γραμμης σε int
-        # print(sudoku[count])
+        if count < 9:
+            sudoku[count] = line.split(" ")  # Διαβάζει γραμμη γραμμη το αρχείο, την σπαει στα κενα, και αγνωεί τα \n
+            sudoku[count][-1] = sudoku[count][-1].replace('\n', '')
+            # Κάτι γινόταν και χρείαστηκε να προσθέσω αυτήν την γραμμή
+            sudoku[count] = [int(x) for x in sudoku[count]]  # Μετατρέπει ολα τα στοιχεία της γραμμης σε int
+            print(sudoku[count])
+        else:
+            # επεξεργασία της γραμμής έτσι ώστε οι αριθμοι να είνια int και τα <,> να είναι str
+            gt_line = line.split(' ')
+            gt_line[-1] = gt_line[-1].replace('\n', '')
+            gt_line[0] = int(gt_line[0])
+            gt_line[-1] = int(gt_line[-1])
+            print(gt_line)
+
+            # gt_line[0] το ένα κελί, gt_line[1] είναι το άλλο, gt_line[0] ειναι τα < ή >
+            if (gt_line[1] == '>'):
+                constraints[gt_line[0]][gt_line[-1]] = 2
+            elif (gt_line[1] == '<'):
+                constraints[gt_line[0]][gt_line[-1]] = 3
         count += 1
+
+    # TODO:
+    #   θέλει τους αριθμούς κελίου απο το αρχείο sudoku_gt_1 να τα μετατρέπει ο κώδικας είναι
+    #   να τα αλλάζουμε εμέις, προς το πάρων το αλλάζω εγώ.
 
     for i in range(9):
         for j in range(9):
@@ -39,6 +59,8 @@ def initArrays(sudoku=[], domains=[], filename=""):
                 domains[(9 * i) + j] = [-2 for x in domains[(9 * i) + j]]  # κάθε -1 στην γραμμή του domains το κάνει -2
                 # += 8 γιατι απο τα κελια που έχουν προκαθοισμένες τιμές, αφαιρεί τις άλλες 8.
                 domains[(9 * i) + j][sudoku[i][j] - 1] = sudoku[i][j]
+
+
 
 
 def CHECK(xi, a, xj, b, constraints=[]):
@@ -422,7 +444,8 @@ if (__name__ == "__main__"):
     domains = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(81)]  # 81x9
     constraints = [[0 for i in range(81)] for j in range(81)]  # 81x81
 
-    initArrays(sudoku, domains, "sudoku3.txt")
+    initArrays(sudoku, domains, constraints, "sudoku_gt_1.txt")
+
 
     # prints Sudoku
     print("sudoku array")
@@ -434,6 +457,11 @@ if (__name__ == "__main__"):
 
     # print("constrain")
     CONSTRAIN(constraints)
+    supplementary.visualizeConstraints(constraints)  # Γράφει τον πίνακα constraints σε αρχείο
+
+
+    exit()  # για να μην τρέχει ο υπόλοιπος κώδικας
+
 
     # for i in range(81):
     #     print(i, C[i])
