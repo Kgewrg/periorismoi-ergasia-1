@@ -1,9 +1,5 @@
-sudoku = []
-domains = []
-occupiedArray = []
-C = []
-removedCounter = 0
-
+import time
+import copy
 
 class node():
     def __init__(self, sudokuCordinate=(-1, -1), sudoku=[]):
@@ -14,7 +10,7 @@ class node():
     def print(self):
         print(self.sudokuCordinate, self.domainsRow, self.value)
 
-def initArrays(sudoku, domains, filename=""):
+def initArrays(sudoku=[], domains=[], filename=""):
     """
     Διαβάζει απο αρχείο και αποθυκεύει στους πίνακες:
     :param sudoku: array[9][9], αναπαράσταση του sudoku,
@@ -22,7 +18,6 @@ def initArrays(sudoku, domains, filename=""):
     :param filename: string, όνομα του αρχείου απο το οποίο θα διαβάσει
     :return:
     """
-    global removedCounter
     with open(filename) as f:
         lines = f.readlines()
 
@@ -42,12 +37,11 @@ def initArrays(sudoku, domains, filename=""):
             else:
                 # (9*i)+j αντιστοιχεί την δυσδιάστατη θέση του sudo στην μονοδιάστατη γραμμή του domains
                 domains[(9 * i) + j] = [-2 for x in domains[(9 * i) + j]]  # κάθε -1 στην γραμμή του domains το κάνει -2
-                removedCounter += 8  # --------> ΙΣΩΣ ΔΕΝ ΧΡΕΙΑΖΕΤΑΙ ΕΔΩ
                 # += 8 γιατι απο τα κελια που έχουν προκαθοισμένες τιμές, αφαιρεί τις άλλες 8.
                 domains[(9 * i) + j][sudoku[i][j] - 1] = sudoku[i][j]
 
 
-def CHECK(xi, a, xj, b, constraints):
+def CHECK(xi, a, xj, b, constraints=[]):
     """
     Ελέγχει τον περιορισμό ανάμεσα στις τιμές a της μεταβλητή xi και την τιμή b της xj
     :param xi: Μεταβλητή 1
@@ -69,7 +63,7 @@ def CHECK(xi, a, xj, b, constraints):
     return False
 
 
-def SUPPORTED(xi, a, xj, domains, constraints):
+def SUPPORTED(xi, a, xj, domains=[], constraints=[]):
     """
     Ελέγχει αν για την τιμή a της xi υπάρχουν συνεπής στην xj
     :param xi: Μεταβλητή 1 (1-81)
@@ -90,7 +84,7 @@ def SUPPORTED(xi, a, xj, domains, constraints):
     return support
 
 
-def REVISE(xi, xj, domains, constraints):
+def REVISE(xi, xj, removedCounter, domains=[], constraints=[]):
     """
     Ελέγχει για τις τιμές του xi, αν υπάρχουν συνεπής στην xj
     :param xi: γραμμη του domains για την μεταβλητή 1
@@ -99,12 +93,12 @@ def REVISE(xi, xj, domains, constraints):
     :param constraints: array[81][81], πίνακας των constraint
     :return: False αν δεν γίνει κάποια αλλαγή
     """
-    global removedCounter
     # print("checking: xi=", xi, ",xj=", xj)
     revised = False
     for i in domains[xi]:
         if i > 0:
-            return revised
+            return revised, removedCounter
+
     for i in range(len(domains[xi])):
         if domains[xi][i] != -2:
             found = SUPPORTED(xi, i, xj, domains, constraints)
@@ -115,7 +109,7 @@ def REVISE(xi, xj, domains, constraints):
                 domains[xi][i] = -2
                 removedCounter += 1
                 # print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
-    return revised
+    return revised, removedCounter
 
 
 def CONSTRAIN(constraints=[]):
@@ -157,26 +151,29 @@ def neigh(row, constraints=[]):
     """
     neighbours = []
     for i in range(len(constraints[row])):
-        if constraints[row][i] == 1:
+        if constraints[row][i] in [1, 2, 3]:
             neighbours.append(i)
     return neighbours
 
 
-def AC3(sudoku, domains, constraints, Q=[]):
+def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
     """
     Υλοποιήση του αλγορίθμου AC3
     :param sudoku: array[9][9], πίνακας του sudoku
     :param domains: array[81][9], πίνακας των domains
     :param constraints: array[81][81], πίνακας των constraint
     :param Q: queue, προαιρετικό, άμα θελουμε να τρέξει ο AC3 σε καποια συγκεκριμένη ουρά
-    :return: False, αν κάποιο domain μήνει άδειο
+    :param removedCounter: Πλήθος διαγραφών τιμών
+    :return: False, αν κάποιο domain μήνει άδειο, πλήθος διαγραφών
     """
     # Φτίαχνουμε μια ουρά μέ ολα τα κελιά του Sudoku
+    Q = []
     if not Q:
         # Για την περίπτωση που θέλουμε ο AC3 να τρέχει σε μια προκαθορισμένη ουρά
         for row in range(9):
             for col in range(9):
                 Q.append(node((row, col), sudoku))
+
 
     while (len(Q) > 0):
         # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
@@ -187,23 +184,24 @@ def AC3(sudoku, domains, constraints, Q=[]):
             # print("i=", i, "j=", j)
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
-
-            updated = REVISE(i, j, domains, constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
+            updated, removedCounter = REVISE(i, j, removedCounter, domains, constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
             count = 9
             for ch in range(9):  # Ελέγχουμε αν κάτι μείνει κενό
                 if domains[i][ch] == -2:
                     count = count - 1
                     if count == 0:
-                        print("Found empty domain", i, domains[i])
-                        return False
+                        return False, removedCounter
             if updated:
                 Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
                 # το ξαναβάζουμε στην ουρά
 
     # print("breaking, len(Q):", len(Q), "i =", i)
+    print("Variables with only 1 value available:", countSingleValue(domains))
+    # printDomains(domains)
+    return True, removedCounter
 
 
-def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[]):
+def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0):
     """
     Υλοποιήση του αλγορίθμου AC3, τρέχει στην προκαθορισμένη ουρά
     :param sudoku: array[9][9], πίνακας του sudoku
@@ -224,21 +222,21 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[]):
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
 
-            updated = REVISE(i, j, domains, constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
+            updated, removedCounter = REVISE(i, j, removedCounter, domains, constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
             count = 9
             for ch in range(9):  # Ελέγχουμε αν κάτι μείνει κενό
                 if domains[i][ch] == -2:
                     count = count - 1
                     if count == 0:
                         print("Found empty domain", i, domains[i])
-                        return False
+                        return False, removedCounter
             if updated:
                 Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
                 # το ξαναβάζουμε στην ουρά
+    return True, removedCounter
 
 
-def RPC1():
-    global sudoku, domains, constraints
+def RPC1(sudoku=[], domains=[], constraints=[], removedCounter=0):
     # Φτίαχνουμε μια ουρά μέ ολα τα κελιά του Sudoku
     Q = []
     for row in range(9):
@@ -255,7 +253,7 @@ def RPC1():
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
 
-            updated = REVISE_RPC(i, j)  # αν έχει κάνει αλλαγή επιστρέφει true
+            updated, removedCounter = REVISE_RPC(i, j, removedCounter, domains, constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
             count = 9
             for ch in range(9):  # Ελέγχουμε αν κάτι μείνει κενό
                 if domains[i][ch] == -2:
@@ -263,40 +261,42 @@ def RPC1():
                     # print("domainsss", domains[k])
                     if count == 0:
                         print("Found empty domain", i, domains[i])
-                        return False
+                        return False, removedCounter
             if updated:
                 Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
                 # το ξαναβάζουμε στην ουρά
+    print("Variables with only 1 value available:", countSingleValue(domains))
+    # printDomains(domains)
+    return True, removedCounter
 
 
-def REVISE_RPC(xi, xj):
+def REVISE_RPC(xi, xj, removedCounter, domains=[], constraints=[]):
     """
     Ελέγχει για τις τιμές του xi, αν υπάρχουν συνεπής στην xj
     :param xi: γραμμη του domains για την μεταβλητή 1
     :param xj: γραμμη του domains για την μεταβλητή 2
     :return: False αν δεν γίνει κάποια αλλαγή
     """
-    global domains, removedCounter
-    print("checking: xi=", xi, ",xj=", xj)
+    # print("checking: xi=", xi, ",xj=", xj)
     revised = False
     for i in domains[xi]:
         if i > 0:
-            return revised
+            return revised, removedCounter
 
     for i in range(len(domains[xi])):
         if domains[xi][i] != -2:
-            found = SUPPORT_RPC(xi, i, xj)
+            found = SUPPORT_RPC(xi, i, xj, domains, constraints)
             # print("found....", found)
             if not found:
                 # print("false..")
                 revised = True
                 domains[xi][i] = -2
                 removedCounter += 1
-                print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
-    return revised
+                # print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
+    return revised, removedCounter
 
 
-def SUPPORT_RPC(xi, a, xj):
+def SUPPORT_RPC(xi, a, xj, domains=[], constraints=[]):
     """
     Ελέγχει αν για την τιμή a της xi υπάρχουν συνεπής στην xj
     :param xi: Μεταβλητή 1 (1-81)
@@ -304,29 +304,28 @@ def SUPPORT_RPC(xi, a, xj):
     :param xj: Μεταβλητή 2
     :return: True αν υπάρχει κάποια διαφορετική τιμή
     """
-    global domains
     for j in range(len(domains[xj])):
         if domains[xj][j] == -2:
             continue
 
-        if CHECK(xi, a, xj, j):
+        if CHECK(xi, a, xj, j, constraints):
             for m in range(len(domains[xj])):
                 if m > j:
                     if domains[xj][m] == -2:
                         continue
                     # print("callin check(", xi, a, xj, m, ")")
-                    if CHECK(xi, a, xj, m):
+                    if CHECK(xi, a, xj, m, constraints):
                         # print("heloooooooooooooooooooo")
                         return True
             # print("calling PC(", xi, a, xj, j, ")")
-            if PC(xi, a, xj, j):
+            if PC(xi, a, xj, j, constraints):
                 return True  # ειναι TRUE και RPC1
             else:
                 return False  # Δεν είναι RPC1
     return False
 
 
-def PC(xi, a, xj, b):
+def PC(xi, a, xj, b, constraints=[]):
     # περνω τους γείτωνες του xi κ xj
     neighbours_xi = neigh(xi, constraints)  # γειτωνες του xi
     neighbours_xj = neigh(xj, constraints)  # γειτωνες του xj
@@ -335,7 +334,7 @@ def PC(xi, a, xj, b):
     for xk in sameNeighbours:
         pc_support = False
         for c in range(len(domains[xk])):
-            if CHECK(xi, a, xk, c) and CHECK(xj, b, xk, c):
+            if CHECK(xi, a, xk, c, constraints) and CHECK(xj, b, xk, c, constraints):
                 pc_support = True
                 break
         if not pc_support:
@@ -343,13 +342,12 @@ def PC(xi, a, xj, b):
     return True
 
 
-def NSACQ(sudoku=[], domains=[], constraints=[]):
-    global removedCounter
-    AC3(sudoku, domains, constraints)
+def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
+    _, removedCounter = AC3(sudoku, domains, constraints, removedCounter)
     for row in domains:  # na ginei sinartisi
         if (all(elem == -2 for elem in row)):
             print("Found empty domain, domain wipeout")
-            return False
+            return False, removedCounter
 
     Q = []
     for row in range(9):
@@ -358,7 +356,6 @@ def NSACQ(sudoku=[], domains=[], constraints=[]):
 
     while (len(Q) > 0):
         tmpNode_i = Q.pop(0)
-        tmpNode_i.print()
         if tmpNode_i.value != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
             continue
         xi = tmpNode_i.domainsRow  # μας νοιάζει η "γραμμή" στον πίνακα domains
@@ -366,36 +363,56 @@ def NSACQ(sudoku=[], domains=[], constraints=[]):
         for a in range(len(domains[xi])):  # Λουπα που διατρέχει για όλες τις τιμές του xi
             if domains[xi][a] == -2:  # Επίσης αγνωούμε τις τιμές της μεταβλητής οι οποίες έχουν βγει
                 continue
-            print("changing value", a + 1, "from variable", xi)
-            print("domains[xi] before change", domains[xi])
+            # print("changing value", a + 1, "from variable", xi)
+            # print("domains[xi] before change", domains[xi])
             # επιλέγουμε μια τιμή και βγάζουμε τις υπόλοιπες απο το domain της μεταβλητής xi
             tmpDomains = domains[xi].copy()  # για να επαναφέρουμε το domain αργότερα
             domains[xi] = [-2 for x in domains[xi]]
             domains[xi][a] = -1
-            print("domains[xi] after change", domains[xi])
+            # print("domains[xi] after change", domains[xi])
             ac3_Q = neigh(xi, constraints)  # φτιάχνουμε μια ουρά με τους γείτωνες του xi
-            print("Running ac3 for", xi, "'s neigbours:", ac3_Q)
-            AC3_singleton(sudoku, domains, constraints, ac3_Q.copy())  # τρεχουμε ac3 μονο για τους γείτωνες του xi
+            # print("Running ac3 for", xi, "'s neigbours:", ac3_Q)
+            _, removedCounter = AC3_singleton(sudoku, domains, constraints, ac3_Q.copy(), removedCounter)  # τρεχουμε ac3 μονο για τους γείτωνες του xi
 
             # ελέγχουμε αν ο AC3 άδιασε καποιο domain απο εκείνους τους γείτωνες
             for row in ac3_Q:
                 if (all(elem == -2 for elem in domains[row])):
-                    print("Found empty domain, domain wipeout")
                     changed = True
                     tmpDomains[a] = -2  # Αν εν τέλει οδηγειθουμε σε domain wipeout
                     # αλλάζουμε το tmpDomains, μιας και στο τέλος έχουμε domains[xi]=tmpDomains
                     removedCounter += 1  # Μετράμε την αλλαγή που μόλις κάναμε
 
             domains[xi] = tmpDomains  # επαναφέρουμε το domain
-            print("domains[xi] after reverting", domains[xi])
+            # print("domains[xi] after reverting", domains[xi])
 
         # ελέγχουμε για αν άδειασε καποιο domain    (...γιατι και εδω ? )
         for row in domains:  # na ginei sinartisi
             if (all(elem == -2 for elem in row)):
-                print("Found empty domain, domain wipeout")
-                return False
+                return False, removedCounter
         if changed:  # άμα έγινε καποιο wipeout σε καποια μεταβλητή προσθέτουμε τους γείτωνες του xi για ελεγχο πάλι
             Q.extend(ac3_Q)
+    print("Variables with only 1 value available:", countSingleValue(domains))
+    # printDomains(domains)
+    return True, removedCounter
+
+
+def printDomains(domains):
+    print("domains array")
+    for i in range(len(domains)):
+        print(i, domains[i])
+
+
+def countSingleValue(domains):
+    variableCounter = 0
+    for i in range(len(domains)):
+        counter = 0
+        for j in range(len(domains[i])):
+            if domains[i][j] == -1:
+                counter += 1
+        if counter == 1:
+            variableCounter += 1
+
+    return variableCounter
 
 
 if (__name__ == "__main__"):
@@ -405,20 +422,15 @@ if (__name__ == "__main__"):
     domains = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(81)]  # 81x9
     constraints = [[0 for i in range(81)] for j in range(81)]  # 81x81
 
-    initArrays(sudoku, domains, "sudoku2.txt")
-
-    # AC3(sudoku, domains)
-    # printBox(sudoku)
+    initArrays(sudoku, domains, "sudoku3.txt")
 
     # prints Sudoku
     print("sudoku array")
     for i in range(len(sudoku)):
         print(i + 1, sudoku[i])
+    print()
 
-    # prints Domains
-    print("domains array")
-    for i in range(len(domains)):
-        print(i, domains[i])
+    printDomains(domains)
 
     # print("constrain")
     CONSTRAIN(constraints)
@@ -426,34 +438,29 @@ if (__name__ == "__main__"):
     # for i in range(81):
     #     print(i, C[i])
 
-    # AC3(sudoku, domains, constraints)
-    # print("domains array")
-    # for i in range(len(domains)):
-    #     print(i, domains[i])
-    # print("ac3 removed:", removedCounter)
+    print("\nStarting AC3")
+    start_time = time.time()
+    _, ac3_counter = AC3(sudoku, copy.deepcopy(domains), constraints)
+    end_time = time.time()
+    print("AC3 Removed Values:", ac3_counter)
+    # print("%.2f" % a)
+    print("AC3 Execution Time: %.5f sec" % (end_time - start_time))
 
-    # for i in range(len(domains)):
-    #     if (i in occupiedArray):
-    #         continue
-    #     available = 0
-    #     for j in domains[i]:
-    #         if (j == -1):
-    #             available += 1
-    #     print("available for variable", i, ":", available, "domain: ", domains[i])
+    print("\nStarting RPC-1")
+    start_time = time.time()
+    _, rpc_counter = RPC1(sudoku, copy.deepcopy(domains), constraints)
+    end_time = time.time()
+    print("RPC-1 Removed Values:", rpc_counter)
+    print("RPC-1 Execution Time: %.5f sec" % (end_time - start_time))
 
-    # RPC1()
-    # print("domains array")
-    # for i in range(len(domains)):
-    #     print(i, domains[i])
-    # print("removed:", removedCounter)
-
-    NSACQ(sudoku, domains, constraints)
-    print("domains array")
-    for i in range(len(domains)):
-        print(i, domains[i])
-    print("removed:", removedCounter)
+    print("\nStarting NSACQ")
+    start_time = time.time()
+    _, nsacq_counter = NSACQ(sudoku, copy.deepcopy(domains), constraints)
+    end_time = time.time()
+    print("NSACQ Removed Values:", nsacq_counter)
+    print("NSACQ Execution Time: %.5f sec" % (end_time - start_time))
+    
 
     # TODO:
-    #   1. Να γίνει χρονομέτρηση,
+    #   1. Grater than, αλλαγη CONSTRAIN και init_arrays
     #   2. Να καθαρίσει λίγο ο κώδικας και να συμμαζευτεί
-    #   3. Να μπεί print για το αν κάποια μεταβλητή έχει μονο μία τιμή
