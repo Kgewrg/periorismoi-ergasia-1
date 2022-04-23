@@ -239,7 +239,7 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
 
     while (len(Q) > 0):
         # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
-        tmpNode_i = Q.pop(0)  # Η ουρά περιέχει γραμμές domains
+        i = Q.pop(0)  # Η ουρά περιέχει γραμμές domains
         neighbours = neigh(i, constraints)  # εξετάζουμε τους γείτωνες του i
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
@@ -255,7 +255,7 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
                         print("Found empty domain", i, domains[i])
                         return False, removedCounter
             if updated:
-                Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
+                Q.append(i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
                 # το ξαναβάζουμε στην ουρά
     return True, removedCounter
 
