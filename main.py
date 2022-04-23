@@ -12,7 +12,8 @@ class node():
     def print(self):
         print(self.sudokuCordinate, self.domainsRow, self.value)
 
-def initArrays(sudoku=[], domains=[], filename=""):
+
+def initArrays(sudoku=[], domains=[], constraints=[], filename=""):
     """
     Διαβάζει απο αρχείο και αποθυκεύει στους πίνακες:
     :param sudoku: array[9][9], αναπαράσταση του sudoku,
@@ -38,14 +39,16 @@ def initArrays(sudoku=[], domains=[], filename=""):
             gt_line[0] = int(gt_line[0])
             gt_line[-1] = int(gt_line[-1])
             print(gt_line)
-
+            print("-1",gt_line[-1])
             # gt_line[0] το ένα κελί, gt_line[1] είναι το άλλο, gt_line[0] ειναι τα < ή >
             if (gt_line[1] == '>'):
                 constraints[gt_line[0]][gt_line[-1]] = 2
+                constraints[gt_line[-1]][gt_line[0]] = 3
             elif (gt_line[1] == '<'):
                 constraints[gt_line[0]][gt_line[-1]] = 3
+                constraints[gt_line[-1]][gt_line[0]] = 2
         count += 1
-
+    #printDomains(constraints)
     # TODO:
     #   θέλει τους αριθμούς κελίου απο το αρχείο sudoku_gt_1 να τα μετατρέπει ο κώδικας είναι
     #   να τα αλλάζουμε εμέις, προς το πάρων το αλλάζω εγώ.
@@ -59,6 +62,7 @@ def initArrays(sudoku=[], domains=[], filename=""):
                 domains[(9 * i) + j] = [-2 for x in domains[(9 * i) + j]]  # κάθε -1 στην γραμμή του domains το κάνει -2
                 # += 8 γιατι απο τα κελια που έχουν προκαθοισμένες τιμές, αφαιρεί τις άλλες 8.
                 domains[(9 * i) + j][sudoku[i][j] - 1] = sudoku[i][j]
+    return constraints
 
 
 
@@ -124,13 +128,13 @@ def REVISE(xi, xj, removedCounter, domains=[], constraints=[]):
     for i in range(len(domains[xi])):
         if domains[xi][i] != -2:
             found = SUPPORTED(xi, i, xj, domains, constraints)
-            # print("found....", found)
+            #print("found....", found)
             if not found:
                 # print("false..")
                 revised = True
                 domains[xi][i] = -2
                 removedCounter += 1
-                # print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
+                #print("changed domain:", xi, ", value:,", i + 1, "to", domains[xi][i])
     return revised, removedCounter
 
 
@@ -143,16 +147,19 @@ def CONSTRAIN(constraints=[]):
         for i in range(9):
             for j in range(9):
                 if r == i:  # αν είναι στην ίδια γραμμή να είναι διαφορετικοί αριθμοί
-                    constraints[row][(9 * i) + j] = 1
+                    if constraints[row][(9 * i) + j]==0:
+                        constraints[row][(9 * i) + j] = 1
                 if c == j:  # αν είναι στην ίδια στηλη να είναι διαφορετικοί αριθμοί
-                    constraints[row][(9 * i) + j] = 1
+                    if constraints[row][(9 * i) + j]==0:
+                        constraints[row][(9 * i) + j] = 1
 
                 startRow = r - r % 3
                 startCol = c - c % 3
                 # δείχνουν στο πανω αριστερα στοιχείο του block
                 for t in range(3):
                     for y in range(3):
-                        constraints[row][(9 * (startRow + t)) + (startCol + y)] = 1
+                        if constraints[row][(9 * (startRow + t)) + (startCol + y)]==0:
+                            constraints[row][(9 * (startRow + t)) + (startCol + y)] = 1
 
         if k % 9 == 0:  # αν το κ φτασει σε 9,18...κλπ τοτε αυξανουμε μια γραμμή γιατι στο πινακα sudoko θα πρεπει να πάμε στην επόμενη γραμμή
             if k != 0:
@@ -219,7 +226,7 @@ def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
 
     # print("breaking, len(Q):", len(Q), "i =", i)
     print("Variables with only 1 value available:", countSingleValue(domains))
-    # printDomains(domains)
+    printDomains(domains)
     return True, removedCounter
 
 
@@ -444,9 +451,8 @@ if (__name__ == "__main__"):
     domains = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(81)]  # 81x9
     constraints = [[0 for i in range(81)] for j in range(81)]  # 81x81
 
-    initArrays(sudoku, domains, constraints, "sudoku_gt_1.txt")
-
-
+    constraints=initArrays(sudoku, domains, constraints, "sudoku_gt_1.txt")
+    #printDomains(constraints)
     # prints Sudoku
     print("sudoku array")
     for i in range(len(sudoku)):
@@ -458,35 +464,34 @@ if (__name__ == "__main__"):
     # print("constrain")
     CONSTRAIN(constraints)
     supplementary.visualizeConstraints(constraints)  # Γράφει τον πίνακα constraints σε αρχείο
+    printDomains(constraints)
 
-
-    exit()  # για να μην τρέχει ο υπόλοιπος κώδικας
+    #exit()  # για να μην τρέχει ο υπόλοιπος κώδικας
 
 
     # for i in range(81):
     #     print(i, C[i])
 
     print("\nStarting AC3")
-    start_time = time.time()
+  #  start_time = time.time()
     _, ac3_counter = AC3(sudoku, copy.deepcopy(domains), constraints)
-    end_time = time.time()
+  #  end_time = time.time()
     print("AC3 Removed Values:", ac3_counter)
-    # print("%.2f" % a)
-    print("AC3 Execution Time: %.5f sec" % (end_time - start_time))
+    ## print("%.2f" % a)
+    #print("AC3 Execution Time: %.5f sec" % (end_time - start_time))
+    #print("\nStarting RPC-1")
+    #start_time = time.time()
+    #_, rpc_counter = RPC1(sudoku, copy.deepcopy(domains), constraints)
+    #end_time = time.time()
+    #print("RPC-1 Removed Values:", rpc_counter)
+    #print("RPC-1 Execution Time: %.5f sec" % (end_time - start_time))
 
-    print("\nStarting RPC-1")
-    start_time = time.time()
-    _, rpc_counter = RPC1(sudoku, copy.deepcopy(domains), constraints)
-    end_time = time.time()
-    print("RPC-1 Removed Values:", rpc_counter)
-    print("RPC-1 Execution Time: %.5f sec" % (end_time - start_time))
-
-    print("\nStarting NSACQ")
-    start_time = time.time()
-    _, nsacq_counter = NSACQ(sudoku, copy.deepcopy(domains), constraints)
-    end_time = time.time()
-    print("NSACQ Removed Values:", nsacq_counter)
-    print("NSACQ Execution Time: %.5f sec" % (end_time - start_time))
+    #print("\nStarting NSACQ")
+    #start_time = time.time()
+    #_, nsacq_counter = NSACQ(sudoku, copy.deepcopy(domains), constraints)
+    #end_time = time.time()
+    #print("NSACQ Removed Values:", nsacq_counter)
+    #print("NSACQ Execution Time: %.5f sec" % (end_time - start_time))
     
 
     # TODO:
