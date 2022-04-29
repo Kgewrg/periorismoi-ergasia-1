@@ -222,7 +222,6 @@ def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
                 # το ξαναβάζουμε στην ουρά
 
     print("Variables with only 1 value available:", countSingleValue(domains))
-    printDomains(domains)
     return True, removedCounter
 
 
@@ -241,6 +240,7 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
         # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
         i = Q.pop(0)  # Η ουρά περιέχει γραμμές domains
         neighbours = neigh(i, constraints)  # εξετάζουμε τους γείτωνες του i
+        # print("variable:", i, "checking neighbours:", neighbours)
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
@@ -252,7 +252,7 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
                 if domains[i][ch] == -2:
                     count = count - 1
                     if count == 0:
-                        print("Found empty domain", i, domains[i])
+                        # print("Found empty domain", i, domains[i])
                         return False, removedCounter
             if updated:
                 Q.append(i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε,
@@ -389,12 +389,14 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
     :param removedCounter: Πλήθος διαγραφών τιμών
     :return: False, αν κάποιο domain μήνει άδειο, πλήθος διαγραφών
     """
+    print("From AC3: ", end="")
     _, removedCounter = AC3(sudoku, domains, constraints, removedCounter)
+
     for row in domains:  # na ginei sinartisi
         if (all(elem == -2 for elem in row)):
             print("Found empty domain, domain wipeout")
             return False, removedCounter
-
+    startDomains = copy.deepcopy(domains)
     Q = []
     for row in range(9):
         for col in range(9):
@@ -402,10 +404,16 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
 
     while (len(Q) > 0):
         tmpNode_i = Q.pop(0)
-        if tmpNode_i.value != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
-            continue
-        xi = tmpNode_i.domainsRow  # μας νοιάζει η "γραμμή" στον πίνακα domains
+        if type(tmpNode_i) != int:  # Αυτο το κανουμε γιατι στην αρχη η ουρα εχει nodes και αργοτερα ints
+            if tmpNode_i.value != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
+                continue
+            xi = tmpNode_i.domainsRow  # μας νοιάζει η "γραμμή" στον πίνακα domains
+        else:
+            if tmpNode_i != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
+                continue
+            xi = tmpNode_i  # μας νοιάζει η "γραμμή" στον πίνακα domains
         changed = False
+
         for a in range(len(domains[xi])):  # Λουπα που διατρέχει για όλες τις τιμές του xi
             if domains[xi][a] == -2:  # Επίσης αγνωούμε τις τιμές της μεταβλητής οι οποίες έχουν βγει
                 continue
@@ -414,7 +422,7 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
             domains[xi] = [-2 for x in domains[xi]]
             domains[xi][a] = -1
             ac3_Q = neigh(xi, constraints)  # φτιάχνουμε μια ουρά με τους γείτωνες του xi
-            _, removedCounter = AC3_singleton(sudoku, domains, constraints, ac3_Q.copy(),
+            AC3_singleton(sudoku, domains, constraints, ac3_Q.copy(),
                                               removedCounter)  # τρεχουμε ac3 μονο για τους γείτωνες του xi
 
             # ελέγχουμε αν ο AC3 άδιασε καποιο domain απο εκείνους τους γείτωνες
@@ -424,18 +432,20 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
                     tmpDomains[a] = -2  # Αν εν τέλει οδηγειθουμε σε domain wipeout
                     # αλλάζουμε το tmpDomains, μιας και στο τέλος έχουμε domains[xi]=tmpDomains
                     removedCounter += 1  # Μετράμε την αλλαγή που μόλις κάναμε
-
+            domains = startDomains
             domains[xi] = tmpDomains  # επαναφέρουμε το domain
+            # print("after: domains[",xi,"]:", domains[xi])
 
-        # ελέγχουμε για αν άδειασε καποιο domain    (...γιατι και εδω ? )
-        for row in domains:  # na ginei sinartisi
-            if (all(elem == -2 for elem in row)):
-                return False, removedCounter
+        # ελέγχουμε αν αδιασε
+        if (all(elem == -2 for elem in domains[xi])):
+            print("Found empty domain:", xi, domains[xi])
+            return False, removedCounter
+
         if changed:  # άμα έγινε καποιο wipeout σε καποια μεταβλητή προσθέτουμε τους γείτωνες του xi για ελεγχο πάλι
             Q.extend(ac3_Q)
+
     print("Variables with only 1 value available:", countSingleValue(domains))
     return True, removedCounter
-
 
 def printDomains(domains):
     """
@@ -504,7 +514,3 @@ if (__name__ == "__main__"):
     end_time = time.time()
     print("NSACQ Removed Values:", nsacq_counter)
     print("NSACQ Execution Time: %.5f sec" % (end_time - start_time))
-
-    # TODO:
-    #   1. Πρέπει να συζητήσουμε πως θα διαβάζουμε το sudoku στο graeter than
-    #   2. Ίσως να χρησιμοποιούμε τις true/false επιστροφές για να βλέπουμε αν έμεινε άδιο domain στην NSACQ
