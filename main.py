@@ -209,6 +209,8 @@ def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
+            if constraints[i][j] == 0:
+                continue
             updated, removedCounter = REVISE(i, j, removedCounter, domains,
                                              constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
             count = 9
@@ -394,7 +396,7 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
 
     for row in domains:  # na ginei sinartisi
         if (all(elem == -2 for elem in row)):
-            print("Found empty domain, domain wipeout")
+            print("Found empty domain after first run of AC3, domain wipeout")
             return False, removedCounter
     startDomains = copy.deepcopy(domains)
     Q = []
@@ -482,7 +484,7 @@ if (__name__ == "__main__"):
     domains = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(81)]  # 81x9
     constraints = [[0 for i in range(81)] for j in range(81)]  # 81x81
 
-    constraints = initArrays(sudoku, domains, constraints, "sudoku1.txt")
+    constraints = initArrays(sudoku, domains, constraints, "sudoku1_gt.txt")
     # prints Sudoku
 
     print("sudoku array")
