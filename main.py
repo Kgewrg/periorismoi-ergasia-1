@@ -2,17 +2,6 @@ import time
 import copy
 
 
-class node():
-    # Βοηθητική κλάση για την ουρά
-    def __init__(self, sudokuCordinate=(-1, -1), sudoku=[]):
-        self.sudokuCordinate = sudokuCordinate
-        self.domainsRow = self.sudokuCordinate[0] * 9 + self.sudokuCordinate[1]
-        self.value = sudoku[self.sudokuCordinate[0]][self.sudokuCordinate[1]]
-
-    def print(self):
-        print(self.sudokuCordinate, self.domainsRow, self.value)
-
-
 def initArrays(sudoku=[], domains=[], constraints=[], filename=""):
     """
     Διαβάζει απο αρχείο και αποθηκεύει στους πίνακες:
@@ -199,12 +188,11 @@ def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
         # Για την περίπτωση που θέλουμε ο AC3 να τρέχει σε μια προκαθορισμένη ουρά
         for row in range(9):
             for col in range(9):
-                Q.append(node((row, col), sudoku))
+                Q.append(9*row+col)
 
     while (len(Q) > 0):
         # Σε κάθε επανάληψη αφαιρούμε μια μεταβλητή
-        tmpNode_i = Q.pop(0)  # Η ουρά περιέχει nodes
-        i = tmpNode_i.domainsRow  # μας νοιάζει η "θέση" της στην domains
+        i = Q.pop(0)   # μας νοιάζει η "θέση" της στην domains
         neighbours = neigh(i, constraints)  # εξετάζουμε τους γείτονες του i
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
@@ -220,7 +208,7 @@ def AC3(sudoku=[], domains=[], constraints=[], removedCounter=0):
                     if count == 0:
                         return False, removedCounter
             if updated:
-                Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
+                Q.append(j)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
 
     print("Variables with only 1 value available:", countSingleValue(domains))
     return True, removedCounter
@@ -244,7 +232,6 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
                 continue
-
             updated, removedCounter = REVISE(i, j, removedCounter, domains,
                                              constraints)  # αν έχει κάνει αλλαγή επιστρέφει true
             count = 9
@@ -254,8 +241,7 @@ def AC3_singleton(sudoku=[], domains=[], constraints=[], Q=[], removedCounter=0)
                     if count == 0:
                         return False, removedCounter
             if updated:
-                Q.append(i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
-
+                Q.append(j)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
     return True, removedCounter
 
 
@@ -272,12 +258,11 @@ def RPC1(sudoku=[], domains=[], constraints=[], removedCounter=0):
     Q = []
     for row in range(9):
         for col in range(9):
-            Q.append(node((row, col), sudoku))
+            Q.append(9*row+col)
 
     while (len(Q) > 0):
         # Σε κάθε επανάληψη αφαιρούμε μία μεταβλητή
-        tmpNode_i = Q.pop(0)
-        i = tmpNode_i.domainsRow  # μας νοιάζει η "θέση" της στην domains
+        i = Q.pop(0)  # μας νοιάζει η "θέση" της στην domains
         neighbours = neigh(i, constraints)  # εξετάζουμε τους γείτονες του i
         for j in neighbours:
             if i == j:  # για να μην εξετάσουμε τον εαυτό του
@@ -293,7 +278,7 @@ def RPC1(sudoku=[], domains=[], constraints=[], removedCounter=0):
                         print("Found empty domain", i, domains[i])
                         return False, removedCounter
             if updated:
-                Q.append(tmpNode_i)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
+                Q.append(j)  # Αν έχει αφαιρεθεί κάτι απο το domain που εξετάσαμε, το ξαναβάζουμε στην ουρά
 
     print("Variables with only 1 value available:", countSingleValue(domains))
     return True, removedCounter
@@ -390,7 +375,7 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
     """
     print("From AC3: ", end="")
     _, removedCounter = AC3(sudoku, domains, constraints, removedCounter)
-
+    print("AC3 in NSACQ removed:", removedCounter)
     for row in domains:
         if (all(elem == -2 for elem in row)):
             print("Found empty domain after first run of AC3, domain wipeout")
@@ -399,18 +384,10 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
     Q = []
     for row in range(9):
         for col in range(9):
-            Q.append(node((row, col), sudoku))
+            Q.append(9*row+col)
 
     while (len(Q) > 0):
-        tmpNode_i = Q.pop(0)
-        if type(tmpNode_i) != int:  # Αυτό το κάνουμε γιατί στην αρχή η ουρά έχει nodes και αργότερα ints
-            if tmpNode_i.value != 0:  # Αγνοούμε τα κελιά που έχουν προκαθορισμένη τιμή
-                continue
-            xi = tmpNode_i.domainsRow  # μας νοιάζει η "γραμμή" στον πίνακα domains
-        else:
-            if tmpNode_i != 0:  # Αγνούμε τα κελιά που έχουν προκαθορισμένη τιμή
-                continue
-            xi = tmpNode_i  # μας νοιάζει η "γραμμή" στον πίνακα domains
+        xi = Q.pop(0)
         changed = False
 
         for a in range(len(domains[xi])):  # Επανάληψη που διατρέχει όλες τις τιμές του xi
@@ -421,9 +398,8 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
             domains[xi] = [-2 for x in domains[xi]]
             domains[xi][a] = -1
             ac3_Q = neigh(xi, constraints)  # φτιάχνουμε μια ουρά με τους γείτονες του xi
-            AC3_singleton(sudoku, domains, constraints, ac3_Q.copy(),
-                                              removedCounter)  # τρεχουμε AC3 μόνο για τους γείτονες του xi
-
+            AC3_singleton(sudoku, copy.deepcopy(domains), constraints, ac3_Q.copy(),
+                          removedCounter)  # τρεχουμε AC3 μόνο για τους γείτονες του xi
             # ελέγχουμε αν ο AC3 άδειασε κάποιο domain απο εκείνους τους γείτονες
             for row in ac3_Q:
                 if (all(elem == -2 for elem in domains[row])):
@@ -431,9 +407,10 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
                     tmpDomains[a] = -2  # Αν εν τέλει οδηγηθούμε σε domain wipeout
                     # αλλάζουμε το tmpDomains, μιας και στο τέλος έχουμε domains[xi] = tmpDomains
                     removedCounter += 1  # Μετράμε την αλλαγή που μόλις κάναμε
+                    print("tmp", tmpDomains, "xi", xi)
             domains = startDomains
             domains[xi] = tmpDomains  # επαναφέρουμε το domain
-
+            # print("dom",domains[xi])
         # ελέγχουμε αν άδειασε
         if (all(elem == -2 for elem in domains[xi])):
             print("Found empty domain:", xi, domains[xi])
@@ -441,7 +418,6 @@ def NSACQ(sudoku=[], domains=[], constraints=[], removedCounter=0):
 
         if changed:  # άμα έγινε κάποιο wipeout σε κάποια μεταβλητή προσθέτουμε τους γείτονες του xi για έλεγχο πάλι
             Q.extend(ac3_Q)
-
     print("Variables with only 1 value available:", countSingleValue(domains))
     return True, removedCounter
 
@@ -475,7 +451,6 @@ def countSingleValue(domains):
 
 
 if (__name__ == "__main__"):
-
     # Αρχικοποίηση των πινάκων
     sudoku = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(9)]  # 9x9
     domains = [[-1, -1, -1, -1, -1, -1, -1, -1, -1] for i in range(81)]  # 81x9
